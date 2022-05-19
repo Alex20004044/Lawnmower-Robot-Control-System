@@ -1,0 +1,4 @@
+<launch>
+  <arg name="launch_file" default="$(find lecture2_launch)/launch/remap.launch" />
+  <include file="$(arg launch_file)" />
+</launch>

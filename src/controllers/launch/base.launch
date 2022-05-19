@@ -1,0 +1,10 @@
+<launch>
+
+  <!-- <node name="teleop_twist_keyboard" pkg="teleop_twist_keyboard" type="teleop_twist_keyboard.py">
+  	<remap from="/cmd_vel" to="/teleop_input"/>
+  </node>-->
+  <node name="state_controller" pkg="controllers" type="state_controller.py"/>
+  <include file="$(find lecture4_navigation)/launch/base.launch" />
+
+</launch>
+

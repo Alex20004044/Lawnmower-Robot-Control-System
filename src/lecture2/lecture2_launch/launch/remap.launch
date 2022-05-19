@@ -1,0 +1,11 @@
+<launch>
+  <node name="pub_1" pkg="lecture1_topic_cpp" type="publisher" />
+  <node name="sub_1" pkg="lecture1_topic_cpp" type="subscriber" output="screen" />
+  <node name="pub_2" pkg="lecture1_topic_py" type="publisher.py">
+    <remap from="topic" to="topic_2" />
+  </node>
+  <node name="sub_2" pkg="lecture1_topic_py" type="subscriber.py" output="screen">
+    <remap from="topic" to="topic_2" />
+  </node>
+  <node name="rqt_graph" pkg="rqt_graph" type="rqt_graph" required="true" />
+</launch>

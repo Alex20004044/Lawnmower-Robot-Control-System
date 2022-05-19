@@ -1,0 +1,12 @@
+<launch>
+  <arg name="world_name" default="$(find lecture4_nav_world)/worlds/nav.world" />
+  <include file="$(find bbot_description)/launch/bbot_gazebo.launch">
+    <arg name="world_name" value="$(arg world_name)" />
+  </include>
+  <node name="scan_to_scan_filter_chain" pkg="laser_filters" type="scan_to_scan_filter_chain">
+    <rosparam command="load" file="$(find lecture4_navigation)/config/laser_filters.yaml" />
+    <remap from="scan" to="scan_raw" />
+    <remap from="scan_filtered" to="scan" />
+  </node>
+</launch>
+

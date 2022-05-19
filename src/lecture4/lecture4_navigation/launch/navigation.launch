@@ -1,0 +1,10 @@
+<launch>
+  <arg name="map" />
+  <arg name="rvizconfig" default="$(find lecture4_navigation)/rviz/navigation.rviz" />
+  <include file="$(find lecture4_navigation)/launch/base.launch" />
+  <include file="$(find bbot_navigation)/launch/bbot_navigation.launch">
+    <arg name="map" value="$(arg map)" />
+  </include>
+  <node name="rviz" pkg="rviz" type="rviz" args="-d $(arg rvizconfig)" />
+</launch>
+

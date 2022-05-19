@@ -1,0 +1,15 @@
+<launch>
+  <arg name="rvizconfig" default="$(find lecture4_navigation)/rviz/navigation.rviz" />
+  <include file="$(find lecture4_navigation)/launch/base.launch" />
+  <node name="slam_gmapping" pkg="gmapping" type="slam_gmapping" />
+  <node name="move_base" pkg="move_base" type="move_base" respawn="false" output="screen">
+    <rosparam file="$(find bbot_navigation)/config/costmap_common_params.yaml" command="load" ns="global_costmap" />
+    <rosparam file="$(find bbot_navigation)/config/costmap_common_params.yaml" command="load" ns="local_costmap" />
+    <rosparam file="$(find bbot_navigation)/config/local_costmap_params.yaml" command="load" />
+    <rosparam file="$(find bbot_navigation)/config/global_costmap_params.yaml" command="load" />
+    <rosparam file="$(find bbot_navigation)/config/base_local_planner_params.yaml" command="load" />
+  </node>
+  <node name="autopilot" pkg="lecture4_navigation" type="autopilot.py" output="screen" />
+  <node name="rviz" pkg="rviz" type="rviz" args="-d $(arg rvizconfig)" />
+</launch>
+

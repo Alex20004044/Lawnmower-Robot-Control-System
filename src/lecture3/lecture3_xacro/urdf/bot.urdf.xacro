@@ -1,0 +1,79 @@
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro" name="bot">
+  <xacro:macro name="bot" params="suffix">
+    <xacro:macro name="material_white">
+      <material name="white">
+        <color rgba="1 1 1 1"/>
+      </material>
+    </xacro:macro>
+
+    <link name="base_link_${suffix}">
+      <visual>
+        <geometry>
+          <cylinder length="0.1" radius="0.5" />
+        </geometry>
+        <origin xyz="0 0 0.05" />
+        <xacro:material_white />
+      </visual>
+    </link>
+
+    <link name="continuous_link_${suffix}">
+      <visual>
+        <geometry>
+          <box size="0.2 0.5 1" />
+        </geometry>
+        <origin xyz="0 0 0.5" />
+        <xacro:material_white />
+      </visual>
+    </link>
+
+    <link name="fixed_link_${suffix}">
+      <visual>
+        <geometry>
+          <sphere radius="0.25" />
+        </geometry>
+        <origin xyz="0 0 0.25" />
+        <xacro:material_white />
+      </visual>
+    </link>
+
+    <link name="revolute_link_${suffix}" />
+
+    <link name="prismatic_link_${suffix}">
+      <visual>
+        <geometry>
+          <box size="0.6 0.1 0.1" />
+        </geometry>
+        <origin xyz="0.3 0 0" />
+        <xacro:material_white />
+      </visual>
+    </link>
+
+    <joint name="continuous_joint_${suffix}" type="continuous">
+      <parent link="base_link_${suffix}" />
+      <child link="continuous_link_${suffix}" />
+      <origin xyz="0 0 0.1" />
+      <axis xyz="0 0 1" />
+    </joint>
+
+    <joint name="fixed_joint_${suffix}" type="fixed">
+      <parent link="continuous_link_${suffix}" />
+      <child link="fixed_link_${suffix}" />
+      <origin xyz="0 0 1" />
+    </joint>
+
+    <joint name="revolute_joint_${suffix}" type="revolute">
+      <parent link="continuous_link_${suffix}" />
+      <child link="revolute_link_${suffix}" />
+      <origin xyz="0 0.3 0.8" rpy="0 0 0" />
+      <axis xyz="0 -1 0" />
+      <limit lower="${radians(-90)}" upper="0" effort="1" velocity="1" />
+    </joint>
+
+    <joint name="prismatic_joint_${suffix}" type="prismatic">
+      <parent link="revolute_link_${suffix}" />
+      <child link="prismatic_link_${suffix}" />
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <limit lower="-0.3" upper="0" effort="1" velocity="1" />
+    </joint>
+  </xacro:macro>
+</robot>

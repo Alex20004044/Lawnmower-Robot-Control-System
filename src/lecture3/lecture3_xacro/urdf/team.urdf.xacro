@@ -1,0 +1,37 @@
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro" name="team">
+  <xacro:property name="x_n" value="3" />
+  <xacro:property name="y_n" value="5" />
+  <xacro:property name="x_k" value="2" />
+  <xacro:property name="y_k" value="1.5" />
+  <xacro:property name="x_b" value="${-x_k*x_n/2}" />
+  <xacro:property name="y_b" value="${-y_k*y_n/2}" />
+
+  <link name="world" />
+
+  <xacro:include filename="$(find lecture3_xacro)/urdf/bot.urdf.xacro" />
+
+  <xacro:macro name="bot_jointed" params="suffix xyz">
+    <xacro:bot suffix="${suffix}" />
+    <joint name="world_joint_${suffix}" type="fixed">
+      <parent link="world" />
+      <child link="base_link_${suffix}" />
+      <origin xyz="${xyz}" />
+    </joint>
+  </xacro:macro>
+
+  <xacro:macro name="loop_row" params="begin end x">
+    <xacro:bot_jointed suffix="${x}_${begin}" xyz="${x*x_k+x_b} ${begin*y_k+y_b} 0" />
+    <xacro:if value="${end-begin}">
+      <xacro:loop_row begin="${begin+1}" end="${end}" x="${x}" />
+    </xacro:if>
+  </xacro:macro>
+
+  <xacro:macro name="loop" params="begin end">
+    <xacro:loop_row begin="0" end="${y_n}" x="${begin}" />
+    <xacro:if value="${end-begin}">
+      <xacro:loop begin="${begin+1}" end="${end}" />
+    </xacro:if>
+  </xacro:macro>
+
+  <xacro:loop begin="0" end="${x_n}" />
+</robot>

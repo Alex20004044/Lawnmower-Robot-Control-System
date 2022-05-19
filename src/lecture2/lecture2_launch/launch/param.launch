@@ -1,0 +1,5 @@
+<launch>
+  <node name="node" pkg="lecture2_param_cpp" type="param" output="screen" required="true">
+    <param name="param" value="This is not a default value!" />
+  </node>
+</launch>

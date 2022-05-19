@@ -1,0 +1,7 @@
+<launch>
+  <node name="pub" pkg="lecture1_topic_cpp" type="publisher" ns="cpp" />
+  <node name="sub" pkg="lecture1_topic_cpp" type="subscriber" ns="cpp" output="screen" />
+  <node name="pub" pkg="lecture1_topic_py" type="publisher.py" ns="py" />
+  <node name="sub" pkg="lecture1_topic_py" type="subscriber.py" ns="py" output="screen" />
+  <node name="rqt_graph" pkg="rqt_graph" type="rqt_graph" required="true" />
+</launch>

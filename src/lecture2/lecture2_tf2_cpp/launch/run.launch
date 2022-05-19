@@ -1,0 +1,5 @@
+<launch>
+  <node name="publisher" pkg="lecture2_tf2_cpp" type="publisher" />
+  <node name="subscriber" pkg="lecture2_tf2_cpp" type="subscriber" output="screen" />
+  <node name="rviz" pkg="rviz" type="rviz" args="-d $(find lecture2_tf2_cpp)/rviz/config.rviz" required="true" />
+</launch>

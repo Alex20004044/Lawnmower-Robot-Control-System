@@ -1,0 +1,79 @@
+<robot name="example_robot">
+  <link name="base_link">
+    <visual>
+      <geometry>
+        <cylinder length="0.1" radius="0.5" />
+      </geometry>
+      <origin xyz="0 0 0.05" />
+      <material name="white">
+        <color rgba="1 1 1 1"/>
+      </material>
+    </visual>
+  </link>
+
+  <link name="continuous_link">
+    <visual>
+      <geometry>
+        <box size="0.2 0.5 1" />
+      </geometry>
+      <origin xyz="0 0 0.5" />
+      <material name="white">
+        <color rgba="1 1 1 1"/>
+      </material>
+    </visual>
+  </link>
+
+  <link name="fixed_link">
+    <visual>
+      <geometry>
+        <sphere radius="0.25" />
+      </geometry>
+      <origin xyz="0 0 0.25" />
+      <material name="white">
+        <color rgba="1 1 1 1"/>
+      </material>
+    </visual>
+  </link>
+
+  <link name="revolute_link" />
+
+  <link name="prismatic_link">
+    <visual>
+      <geometry>
+        <box size="0.6 0.1 0.1" />
+      </geometry>
+      <origin xyz="0.3 0 0" />
+      <material name="white">
+        <color rgba="1 1 1 1"/>
+      </material>
+    </visual>
+  </link>
+
+  <joint name="continuous_joint" type="continuous">
+    <parent link="base_link" />
+    <child link="continuous_link" />
+    <origin xyz="0 0 0.1" />
+    <axis xyz="0 0 1" />
+  </joint>
+
+  <joint name="fixed_joint" type="fixed">
+    <parent link="continuous_link" />
+    <child link="fixed_link" />
+    <origin xyz="0 0 1" />
+  </joint>
+
+  <joint name="revolute_joint" type="revolute">
+    <parent link="continuous_link" />
+    <child link="revolute_link" />
+    <origin xyz="0 0.3 0.8" rpy="0 0 0" />
+    <axis xyz="0 -1 0" />
+    <limit lower="-1.57" upper="0" effort="1" velocity="1" />
+  </joint>
+
+  <joint name="prismatic_joint" type="prismatic">
+    <parent link="revolute_link" />
+    <child link="prismatic_link" />
+    <origin xyz="0 0 0" rpy="0 0 0" />
+    <limit lower="-0.3" upper="0" effort="1" velocity="1" />
+  </joint>
+</robot>

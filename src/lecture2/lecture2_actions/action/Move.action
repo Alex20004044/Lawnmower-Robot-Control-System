@@ -1,0 +1,13 @@
+# goal
+float64 position
+float64 speed
+---
+# result
+float64 position
+float64 time
+---
+# feedback
+float64 position
+float64 speed
+float64 elapsed
+float64 remains

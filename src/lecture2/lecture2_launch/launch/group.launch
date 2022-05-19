@@ -1,0 +1,11 @@
+<launch>
+  <group ns="cpp">
+    <node name="pub" pkg="lecture1_topic_cpp" type="publisher" />
+    <node name="sub" pkg="lecture1_topic_cpp" type="subscriber" output="screen" />
+  </group>
+  <group ns="py">
+    <node name="pub" pkg="lecture1_topic_py" type="publisher.py" />
+    <node name="sub" pkg="lecture1_topic_py" type="subscriber.py" output="screen" />
+  </group>
+  <node name="rqt_graph" pkg="rqt_graph" type="rqt_graph" required="true" />
+</launch>

@@ -1,0 +1,8 @@
+<launch>
+  <arg name="rvizconfig" default="$(find lecture4_navigation)/rviz/gmapping.rviz" />
+  <include file="$(find lecture4_navigation)/launch/base.launch" />
+  <node name="slam_gmapping" pkg="gmapping" type="slam_gmapping" />
+  <node name="rviz" pkg="rviz" type="rviz" args="-d $(arg rvizconfig)" />
+  <node name="rqt_robot_steering" pkg="rqt_robot_steering" type="rqt_robot_steering" />
+</launch>
+

@@ -1,0 +1,8 @@
+footprint: [[0.25, 0.25], [0.25, -0.25], [-0.25, -0.25], [-0.25, 0.25]]
+observation_sources: rtabmap_point_cloud
+rtabmap_point_cloud:
+  data_type: PointCloud2
+  topic: /rtabmap/cloud_obstacles
+  sensor_frame: camera_rgbd_frame
+  marking: true
+
