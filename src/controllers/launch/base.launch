@@ -5,6 +5,6 @@
   </node>-->
   <node name="state_controller" pkg="controllers" type="state_controller.py"/>
   <include file="$(find lecture4_navigation)/launch/base.launch" />
-
+   <node name="rqt_service_caller" pkg="rqt_service_caller" type="rqt_service_caller"/>
 </launch>
 

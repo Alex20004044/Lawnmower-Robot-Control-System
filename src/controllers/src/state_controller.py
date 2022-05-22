@@ -2,50 +2,11 @@
 import rospy
 from std_srvs.srv import SetBool, SetBoolResponse
 from controllers_srvs.srv import SetMode, SetModeRequest, SetModeResponse
+from std_msgs.msg import String
+
 from geometry_msgs.msg import Twist
-
-
-teleop_input_name = "teleop_input"
-
-
-class ManualMode:
-
-
-    def __init__(self):
-        self.isActive = False
-        self.p = rospy.Publisher("cmd_vel", Twist, queue_size=1)
-        self.s = rospy.Subscriber("teleop_input", Twist, self.teleop_input_callback)
-
-
-    def finish(self):
-        self.isActive = False
-
-    def start(self):
-        self.isActive = True
-
-    def teleop_input_callback(self, msg):
-        if(self.isActive):
-            self.p.publish(msg)
-
-    def get_name(self):
-        return "MANUAL"
-
-class PauseMode:
-
-
-    def __init__(self):
-        self.isActive = False
-
-
-
-    def finish(self):
-        self.isActive = False
-
-    def start(self):
-        self.isActive = True
-
-    def get_name(self):
-        return "PAUSE"
+from SystemValues import *
+from ModeBase import *
 
 
 class StateController:
@@ -58,13 +19,14 @@ class StateController:
 
         self.set_lock_service = rospy.Service("set_lock", SetBool, self.set_lock_callback)
         self.set_mode_service = rospy.Service("set_mode", SetMode, self.set_mode_callback)
+        self.publisher_current_state = rospy.Publisher(SystemValues.current_state, String, queue_size=5)
 
-        self.manualMode = ManualMode()
-        self.pauseMode = PauseMode()
-        
-        self.set_state(self.pauseMode)
+        self.modePause = ModePause()
+        self.modeManual = ModeManual()
+                
+        self.set_state(self.modePause)
 
-        self.set_mode(SetModeRequest.PAUSE)
+        #self.set_mode(SetModeRequest.PAUSE)
         rospy.spin()
 
        #Subscribe to action or topic of command_input
@@ -99,20 +61,25 @@ class StateController:
         if(self.isLocked):
             return False
 
-        if(mode != self.current_state.get_name()):
+        if(mode != self.current_state.get_mode_index()):
             self.current_state.finish()
             self.set_state(self.get_mode(mode))
             self.current_state.start()
-        return True
+            return True
+        else:
+            return False
 
     def get_mode(self, mode):
         if(mode == SetModeRequest.MANUAL):
-            return self.manualMode
+            return self.modeManual
         else:
-            return self.pauseMode
+            return self.modePause
 
     def set_state(self, state):
         self.current_state = state
+        msg = String("Current state: " + str(self.current_state.get_mode_index()))
+        self.publisher_current_state.publish(msg)
+
 
 if __name__ == '__main__':
     try:
