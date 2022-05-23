@@ -14,16 +14,21 @@ class StateController:
     def __init__(self):
         self.isLocked = False
         rospy.init_node("state_controller")
+        instance = self;
         #Service SetMode
         #Service SetLock
 
         self.set_lock_service = rospy.Service("set_lock", SetBool, self.set_lock_callback)
+        self.set_blades_service = rospy.Service("set_blades", SetBool, self.set_blades_callback)
         self.set_mode_service = rospy.Service("set_mode", SetMode, self.set_mode_callback)
         self.publisher_current_state = rospy.Publisher(SystemValues.current_state, String, queue_size=5)
 
         self.modePause = ModePause()
         self.modeManual = ModeManual()
-                
+
+        self.modeEmergency = ModeEmergency()
+
+        self.isBladesActive = False
         self.set_state(self.modePause)
 
         #self.set_mode(SetModeRequest.PAUSE)
@@ -40,22 +45,18 @@ class StateController:
        # pass
 
     def set_lock_callback(self, req):
-        set_lock(req.data)
+        self.set_lock(req.data)
         return SetBoolResponse(True, "OK")
 
     def set_lock(self, isLock):
         self.isLocked = isLock
         if self.isLocked:
-            pass
-            #current_state = Pause
+            self.set_state(self.modeEmergency)
         else:
-            pass
-            #current_state = AlarmPause
+            self.set_state(self.modePause)
 
     def set_mode_callback(self, req):
         return SetModeResponse(self.set_mode(req.mode))
-
-
 
     def set_mode(self, mode):
         if(self.isLocked):
@@ -69,6 +70,21 @@ class StateController:
         else:
             return False
 
+    def set_blades_callback(self, isActive):
+        return SetBoolResponse(self.set_blades(isActive), "OK")
+
+    def set_blades(self, isActive):
+        if(isActive and (self.current_state.get_mode_index() == SetModeRequest.MANUAL or self.current_state.get_mode_index() == SetModeRequest.MOW)):
+            self.isBladesActive = isActive
+            self._log_system_info()
+            return True
+        elif(not isActive):
+            self.isBladesActive = isActive
+            self._log_system_info()
+            return True
+        else:
+            return False
+
     def get_mode(self, mode):
         if(mode == SetModeRequest.MANUAL):
             return self.modeManual
@@ -77,7 +93,14 @@ class StateController:
 
     def set_state(self, state):
         self.current_state = state
-        msg = String("Current state: " + str(self.current_state.get_mode_index()))
+        self._log_system_info()
+
+
+    def _log_system_info(self):
+        info = "Current state: " + str(self.current_state.get_mode_index()) + ' | '
+        info = info + "IsLocked: " + str(self.isLocked) + ' | '
+        info = info + "IsBladesActive: " + str(self.isBladesActive)
+        msg = String(info)
         self.publisher_current_state.publish(msg)
 
 
