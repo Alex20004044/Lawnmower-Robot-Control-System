@@ -10,25 +10,29 @@ class ModeBase:
 
     def __init__(self):
         self.isActive = False
+        self.publisher_cmd_vel = rospy.Publisher("cmd_vel", Twist, queue_size=1)
 
     def finish(self):
         self.isActive = False
+        self.reset()
 
     def start(self):
         self.isActive = True
+        self.reset()
 
     def get_mode_index(self):
-        raise Exeption("Mode index is not defined")
+        raise Exception("Mode index is not defined")
 
+    def on_low_battery(self):
+        print("Low battery!")
+    def on_high_battery(self):
+        print("High battery!")
 
-class ModePause(ModeBase):
+    def reset(self):
+        self.reset_velocity()
+        SystemValues.StateControllerManager.set_blades(False)
 
-    def __init__(self):
-        ModeBase.__init__(self)
-        self.p = rospy.Publisher("cmd_vel", Twist, queue_size=1)
-
-    def start(self):
-        ModeBase.start(self)
+    def reset_velocity(self):
         msg = Twist()
         msg.linear.x = 0
         msg.linear.y = 0
@@ -37,7 +41,13 @@ class ModePause(ModeBase):
         msg.angular.x = 0
         msg.angular.y = 0
         msg.angular.z = 0
-        self.p.publish(msg)
+        self.publisher_cmd_vel.publish(msg)
+
+
+class ModePause(ModeBase):
+
+    def __init__(self):
+        ModeBase.__init__(self)
 
     def get_mode_index(self):
         return SetModeRequest.PAUSE
@@ -47,24 +57,14 @@ class ModeManual(ModeBase):
 
     def __init__(self):
         ModeBase.__init__(self)
-        self.p = rospy.Publisher("cmd_vel", Twist, queue_size=1)
         self.s = rospy.Subscriber(SystemValues.teleop_input_name, Twist, self.teleop_input_callback)
 
     def finish(self):
         ModeBase.finish(self)
-        msg = Twist()
-        msg.linear.x = 0
-        msg.linear.y = 0
-        msg.linear.z = 0
-
-        msg.angular.x = 0
-        msg.angular.y = 0
-        msg.angular.z = 0
-        self.p.publish(msg)
 
     def teleop_input_callback(self, msg):
         if (self.isActive):
-            self.p.publish(msg)
+            self.publisher_cmd_vel.publish(msg)
 
     def get_mode_index(self):
         return SetModeRequest.MANUAL
@@ -97,7 +97,7 @@ class ModeMow(ModeBase):
         ModeBase.finish(self)
 
     def get_mode_index(self):
-        return SetModeRequest.SETUP
+        return SetModeRequest.MOW
 
 
 class ModeReturn(ModeBase):
@@ -122,26 +122,10 @@ class ModeEmergency(ModeBase):
 
     def start(self):
         ModeBase.start(self)
-        msg = Twist()
-        msg.linear.x = 0
-        msg.linear.y = 0
-        msg.linear.z = 0
-
-        msg.angular.x = 0
-        msg.angular.y = 0
-        msg.angular.z = 0
-        self.p.publish(msg)
-
-        State
 
     def finish(self):
         ModeBase.finish(self)
 
     def get_mode_index(self):
-        return 111
+        return SystemValues.emergency_code
 
-
-class Functions:
-
-    def reset_speed(self):
-        pass
