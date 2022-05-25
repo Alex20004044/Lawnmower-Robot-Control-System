@@ -73,7 +73,7 @@ class StateController:
             return False
 
         if(isActive and (self.current_state.get_mode_index() == SetModeRequest.MANUAL or self.current_state.get_mode_index() == SetModeRequest.MOW)):
-            self.isBladesActive = isActive
+            self.isBladesActive = True
             #publish blade state
             self._log_system_info()
             return True
@@ -126,6 +126,8 @@ class StateController:
 if __name__ == '__main__':
     try:
         SystemValues.StateControllerManager = StateController()
+        #rospy.loginfo("TEST")
+        #print("Print")
         rospy.spin()
     except rospy.ROSInterruptException:
         pass

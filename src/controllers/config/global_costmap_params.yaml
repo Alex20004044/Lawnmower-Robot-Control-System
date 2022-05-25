@@ -1,0 +1,7 @@
+global_costmap:
+  global_frame: map
+  robot_base_frame: base_link
+  static_map: true
+  use_dijkstra: false
+  inflation_radius: 0.05
+

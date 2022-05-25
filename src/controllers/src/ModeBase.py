@@ -99,6 +99,9 @@ class ModeMow(ModeBase):
     def get_mode_index(self):
         return SetModeRequest.MOW
 
+    def on_low_battery(self):
+        SystemValues.StateControllerManager.set_mode(SetModeRequest.RETURN)
+
 
 class ModeReturn(ModeBase):
 
