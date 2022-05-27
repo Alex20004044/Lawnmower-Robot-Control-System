@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <launch>
 	<arg name="boustrophedon_decomposition" default="true"/>
-	<arg name="border_drive" default="true"/>
+	<arg name="border_drive" default="false"/>
 
 	<node pkg="path_coverage" type="path_coverage_node.py" name="path_coverage" output="screen">
 		<!-- Whether to execute the boustrophedon decomposition -->
