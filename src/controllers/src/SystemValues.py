@@ -14,3 +14,11 @@ class SystemValues:
 
 	dataPath = "/home/alex20004044/Diploma/Lawnmower-Robot-Control-System/Data/"
 	dataZoneName = "DataZone.json"
+	basePointName = "BasePoint.json"
+
+	greenZoneMapName = "GreenZoneMap.pgm"
+
+	map_width = 5000
+	map_height = 5000
+	map_resolution = 0.05
+	map_origin = (-125,-125)

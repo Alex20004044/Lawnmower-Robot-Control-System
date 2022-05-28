@@ -7,6 +7,10 @@ from controllers_srvs.srv import SetMode, SetModeRequest, SetModeResponse,\
 from state_controller import *
 import json
 import tf2_ros
+import cv2
+import numpy as np
+import matplotlib.pyplot as plt
+
 
 class ModeBase:
 
@@ -81,6 +85,7 @@ class ModeSetup(ModeBase):
         self.isCreateZoneMode = False
         self.setup_commands_service = rospy.Service(SystemValues.setup_command_service_name, SetupCommands, self.setup_commands_callback)
         self.zoneDict = {}
+        self.basePoint = (0, 0)
 
         self.tf_buffer = tf2_ros.Buffer()
         tf2_ros.TransformListener(self.tf_buffer)
@@ -99,16 +104,29 @@ class ModeSetup(ModeBase):
         except Exception as e:
             rospy.logwarn("File loading error: " + str(e))
         if(t is not None):
-            zoneDict = t
+            self.zoneDict = t
         else:
             self.zoneDict[SetupCommandsRequest.ENABLE_GREEN_MODE] = []
             self.zoneDict[SetupCommandsRequest.ENABLE_YELLOW_MODE] = []
             self.zoneDict[SetupCommandsRequest.ENABLE_RED_MODE] = []
 
+        t = None
+        try:
+            with open(SystemValues.dataPath + SystemValues.basePointName) as f:
+                t = json.loads(f.read())
+        except Exception as e:
+            rospy.logwarn("File loading error: " + str(e))
+        if (t is not None):
+            self.basePoint = t
+        else:
+            self.basePoint = (0, 0)
+
     def finish(self):
         ModeBase.finish(self)
         with open(SystemValues.dataPath + SystemValues.dataZoneName, "w") as f:
             f.write(json.dumps(self.zoneDict))
+        with open(SystemValues.dataPath + SystemValues.basePointName, "w") as f:
+            f.write(json.dumps(self.basePoint))
         #zoneDict save
 
     def get_mode_index(self):
@@ -180,7 +198,9 @@ class ModeSetup(ModeBase):
         return "Create zone mode activated: " + str(zoneColorIndex)
 
     def set_base_point(self):
-        return "Base point is set in: " + str(self.get_current_position())
+        pos = self.get_current_position()
+        self.basePoint = pos
+        return "Base point is set in: " + str(pos)
 
     def reset_zone(self, zoneColorIndex):
         return "Reset zone: " + str(zoneColorIndex)
@@ -191,7 +211,7 @@ class ModeSetup(ModeBase):
     def get_current_position(self):
         try:
             pos = self.tf_buffer.lookup_transform("map", "base_link", rospy.Time()).transform.translation
-            return (pos.x, pos.y, pos.z)
+            return (pos.x, pos.y)
         except (tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException) as e:
             rospy.logwarn(str(e))
             return None
@@ -201,9 +221,26 @@ class ModeMow(ModeBase):
 
     def __init__(self):
         ModeBase.__init__(self)
+        self.zoneDict = {}
+        self.width = SystemValues.map_width
+        self.height = SystemValues.map_height
+        self.resolution = SystemValues.map_resolution
+        self.origin = SystemValues.map_origin
 
     def start(self):
         ModeBase.start(self)
+        try:
+            with open(SystemValues.dataPath + SystemValues.dataZoneName) as f:
+                t = json.loads(f.read())
+        except Exception as e:
+            rospy.logwarn("File loading error: " + str(e))
+        if(t is not None):
+            self.zoneDict = t
+        else:
+            SystemValues.StateControllerManager.set_mode(SetModeRequest.PAUSE)
+            rospy.logwarn("Target zones not found: " + str(e))
+        self.create_maps()
+
 
     def finish(self):
         ModeBase.finish(self)
@@ -214,6 +251,35 @@ class ModeMow(ModeBase):
     def on_low_battery(self):
         SystemValues.StateControllerManager.set_mode(SetModeRequest.RETURN)
 
+    def create_maps(self):
+        greenZone = self.create_zone_image(SetupCommandsRequest.ENABLE_GREEN_MODE)
+        cv2.imwrite(SystemValues.dataPath + SystemValues.greenZoneMapName, greenZone)
+
+
+    def create_zone_image(self, zoneColorIndex):
+        image = np.zeros((self.width,self.height,3), np.uint8)
+
+        print(self.zoneDict)
+        polygons = self.zoneDict[str(zoneColorIndex)]
+
+        print(polygons)
+        #polygons = (polygons - self.origin) / self.resolution
+
+        for polygon in polygons:
+            npa = np.int_((np.array(polygon) - self.origin) / self.resolution)
+            print(npa)
+            cv2.fillPoly(
+                image,
+                [npa],
+                color=(255,255,255),
+            )
+        return cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+
+
+    @staticmethod
+    def map(value, low, high, low2, high2):
+        percentage = (value - low) / (high - low)
+        return low2 + (high2 - low2) * percentage
 
 class ModeReturn(ModeBase):
 
