@@ -11,8 +11,8 @@
     <rosparam file="$(find controllers)/config/global_costmap_params.yaml" command="load" />
     <rosparam file="$(find controllers)/config/base_local_planner_params.yaml" command="load" />
   </node>
-
-  <node name="amcl" pkg="amcl" type="amcl"  output="screen">
+	<node pkg="tf" type="static_transform_publisher" name="link1_broadcaster" args="0 0 0 0 0 0 1 	map odom 100" />
+  <!--<node name="amcl" pkg="amcl" type="amcl"  output="screen">
     <param name="odom_model_type" value="diff" />
     <param name="odom_alpha5" value="0.1" />
     <param name="transform_tolerance" value="0.2" />
@@ -42,12 +42,12 @@
     <param name="transform_tolerance" value="0.1" />
     <param name="recovery_alpha_slow" value="0.0" />
     <param name="recovery_alpha_fast" value="0.0" />
-  </node>
+  </node>-->
   
   <arg name="rvizconfig" default="$(find controllers)/rviz/navigation.rviz" />
   <node name="rviz" pkg="rviz" type="rviz" args="-d $(arg rvizconfig)" />
   
-
+  <node name="rqt_robot_steering" pkg="rqt_robot_steering" type="rqt_robot_steering" />
   <!-- <node name="teleop_twist_keyboard" pkg="teleop_twist_keyboard" type="teleop_twist_keyboard.py">
   	<remap from="/cmd_vel" to="/teleop_input"/>
   </node>-->

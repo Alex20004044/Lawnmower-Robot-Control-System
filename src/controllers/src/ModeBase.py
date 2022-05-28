@@ -106,9 +106,9 @@ class ModeSetup(ModeBase):
         if(t is not None):
             self.zoneDict = t
         else:
-            self.zoneDict[SetupCommandsRequest.ENABLE_GREEN_MODE] = []
-            self.zoneDict[SetupCommandsRequest.ENABLE_YELLOW_MODE] = []
-            self.zoneDict[SetupCommandsRequest.ENABLE_RED_MODE] = []
+            self.zoneDict[str(SetupCommandsRequest.ENABLE_GREEN_MODE)] = []
+            self.zoneDict[str(SetupCommandsRequest.ENABLE_YELLOW_MODE)] = []
+            self.zoneDict[str(SetupCommandsRequest.ENABLE_RED_MODE)] = []
 
         t = None
         try:
@@ -187,7 +187,7 @@ class ModeSetup(ModeBase):
         if(len(self.zonePoints)<=2):
             return "Zone is not created. There are incorrect points count"
         else:
-            self.zoneDict[self.currentZoneColorIndex].append(self.zonePoints)
+            self.zoneDict[str(self.currentZoneColorIndex)].append(self.zonePoints)
             return "Zone is created" + str(self.currentZoneColorIndex) + " in points: " + str(self.zonePoints)
 
     def enable_zone_mode(self, zoneColorIndex):
