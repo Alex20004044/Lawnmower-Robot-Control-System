@@ -17,8 +17,19 @@ class SystemValues:
 	basePointName = "BasePoint.json"
 
 	greenZoneMapName = "GreenZoneMap.pgm"
+	yellowZoneMapName = "YellowZoneMap.pgm"
+	redZoneMapName = "RedZoneMap.pgm"
+
+	mowZoneMapName = "MowZoneMap.pgm"
+	roadZoneMapName = "RoadZoneMap.pgm"
+
+	roadMapTopicName = "map"
+	mowMapTopicName = "mow_map"
+
+	clickedPointsTopicName = "/clicked_point"
 
 	map_width = 5000
 	map_height = 5000
 	map_resolution = 0.05
-	map_origin = (-125,-125)
+	#map_origin = (-125,-125)
+	map_origin = (-100, -100)

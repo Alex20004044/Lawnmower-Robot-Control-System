@@ -11,7 +11,6 @@ uint8 SET_BASE_POINT = 6
 uint8 RESET_GREEN_ZONE = 7
 uint8 RESET_YELLOW_ZONE = 8
 uint8 RESET_RED_ZONE = 9
-uint8 RESET_BASE_POINT = 10
 
 uint8 command
 ---

@@ -4,12 +4,18 @@ from geometry_msgs.msg import Twist
 from SystemValues import *
 from controllers_srvs.srv import SetMode, SetModeRequest, SetModeResponse,\
     SetupCommands, SetupCommandsRequest, SetupCommandsResponse     #MowCommands, MowCommandsRequest, MowCommandsResposce,\
+from nav_msgs.msg import OccupancyGrid
+from move_base_msgs.msg import MoveBaseAction, MoveBaseGoal
+from std_msgs.msg import Header
+from geometry_msgs.msg import Point, Quaternion, Pose, PoseStamped, PointStamped
 from state_controller import *
 import json
 import tf2_ros
+import actionlib
 import cv2
 import numpy as np
 import matplotlib.pyplot as plt
+
 
 
 class ModeBase:
@@ -166,8 +172,6 @@ class ModeSetup(ModeBase):
                 return self.reset_zone(SetupCommandsRequest.ENABLE_YELLOW_MODE)
             elif (command == SetupCommandsRequest.RESET_RED_ZONE):
                 return self.reset_zone(SetupCommandsRequest.ENABLE_RED_MODE)
-            elif (command == SetupCommandsRequest.RESET_BASE_POINT):
-                return self.reset_base_point()
             else:
                 return "Incorrect command in defaultMode: " + str(command)
 
@@ -205,9 +209,6 @@ class ModeSetup(ModeBase):
     def reset_zone(self, zoneColorIndex):
         return "Reset zone: " + str(zoneColorIndex)
 
-    def reset_base_point(self):
-        return "Reset base point"
-
     def get_current_position(self):
         try:
             pos = self.tf_buffer.lookup_transform("map", "base_link", rospy.Time()).transform.translation
@@ -227,6 +228,10 @@ class ModeMow(ModeBase):
         self.resolution = SystemValues.map_resolution
         self.origin = SystemValues.map_origin
 
+        self.mowMapPublisher = rospy.Publisher(SystemValues.mowMapTopicName, OccupancyGrid, queue_size=1, latch=True)
+        self.roadMapPublisher = rospy.Publisher(SystemValues.roadMapTopicName, OccupancyGrid, queue_size=1, latch=True)
+        self.clickedPointsPublisher = rospy.Publisher(SystemValues.clickedPointsTopicName, PointStamped, queue_size=50)
+
     def start(self):
         ModeBase.start(self)
         try:
@@ -240,6 +245,8 @@ class ModeMow(ModeBase):
             SystemValues.StateControllerManager.set_mode(SetModeRequest.PAUSE)
             rospy.logwarn("Target zones not found: " + str(e))
         self.create_maps()
+        #self.publish_maps()
+        self.publish_cpp_goal()
 
 
     def finish(self):
@@ -254,6 +261,65 @@ class ModeMow(ModeBase):
     def create_maps(self):
         greenZone = self.create_zone_image(SetupCommandsRequest.ENABLE_GREEN_MODE)
         cv2.imwrite(SystemValues.dataPath + SystemValues.greenZoneMapName, greenZone)
+
+        yellowZone = self.create_zone_image(SetupCommandsRequest.ENABLE_YELLOW_MODE)
+        cv2.imwrite(SystemValues.dataPath + SystemValues.yellowZoneMapName, yellowZone)
+
+        redZone = self.create_zone_image(SetupCommandsRequest.ENABLE_RED_MODE)
+        cv2.imwrite(SystemValues.dataPath + SystemValues.redZoneMapName, redZone)
+
+
+        mowZone = cv2.subtract(greenZone, yellowZone)
+        mowZone = cv2.subtract(mowZone, redZone)
+        cv2.imwrite(SystemValues.dataPath + SystemValues.mowZoneMapName, mowZone)
+
+        mowMap = OccupancyGrid()
+
+        mowMap.header.frame_id = SystemValues.mowMapTopicName
+
+        mowMap.info.map_load_time = rospy.Time()
+        mowMap.info.resolution = self.resolution;
+        mowMap.info.width = self.width;
+        mowMap.info.height = self.height;
+        mowMap.info.origin.position.x = self.origin[0];
+        mowMap.info.origin.position.y = self.origin[1];
+        mowMap.info.origin.position.z = 0;
+        mowMap.info.origin.orientation.x = 0;
+        mowMap.info.origin.orientation.y = 0;
+        mowMap.info.origin.orientation.z = 0;
+
+        mowZone = (255 - mowZone) // 255 * 100
+        mowMap.data = np.reshape(mowZone, -1).tolist()
+
+        rospy.logerr(mowZone.dtype)
+        self.mowMapPublisher.publish(mowMap)
+
+
+        roadZone = cv2.add(greenZone, yellowZone)
+        roadZone = cv2.subtract(roadZone, redZone)
+        cv2.imwrite(SystemValues.dataPath + SystemValues.roadZoneMapName, roadZone)
+
+        roadMap = OccupancyGrid()
+
+        roadMap.header.frame_id = SystemValues.roadMapTopicName
+
+        roadMap.info.map_load_time = rospy.Time()
+        roadMap.info.resolution = self.resolution;
+        roadMap.info.width = self.width;
+        roadMap.info.height = self.height;
+        roadMap.info.origin.position.x = self.origin[0];
+        roadMap.info.origin.position.y = self.origin[1];
+        roadMap.info.origin.position.z = 0;
+        roadMap.info.origin.orientation.x = 0;
+        roadMap.info.origin.orientation.y = 0;
+        roadMap.info.origin.orientation.z = 0;
+
+
+        roadZone = (255 - roadZone)// 255 * 100
+        roadMap.data = np.reshape(roadZone, -1).tolist()
+
+        rospy.logerr(roadZone.dtype)
+        self.roadMapPublisher.publish(roadMap)
 
 
     def create_zone_image(self, zoneColorIndex):
@@ -275,6 +341,50 @@ class ModeMow(ModeBase):
             )
         return cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
 
+    def publish_cpp_goal(self):
+        # p = PointStamped()
+        # p.point.x = SystemValues.map_origin[0]
+        # p.point.y = SystemValues.map_origin[1]
+        # self.clickedPointsPublisher.publish(p)
+        # p.point.x = SystemValues.map_origin[0] + SystemValues.map_width * SystemValues.map_resolution
+        # p.point.y = SystemValues.map_origin[1]
+        # self.clickedPointsPublisher.publish(p)
+        # p.point.x = SystemValues.map_origin[0] + SystemValues.map_width * SystemValues.map_resolution
+        # p.point.y = SystemValues.map_origin[1] + SystemValues.map_width * SystemValues.map_resolution
+        # self.clickedPointsPublisher.publish(p)
+        # p.point.x = SystemValues.map_origin[0]
+        # p.point.y = SystemValues.map_origin[1] + SystemValues.map_width * SystemValues.map_resolution
+        # self.clickedPointsPublisher.publish(p)
+        #
+        # p.point.x = SystemValues.map_origin[0]
+        # p.point.y = SystemValues.map_origin[1]
+        # self.clickedPointsPublisher.publish(p)
+        rate = rospy.Rate(10)
+        p = PointStamped()
+        p.header.frame_id = SystemValues.mowMapTopicName
+        p.point.x = -2
+        p.point.y = -2
+        rospy.logerr(p)
+        self.clickedPointsPublisher.publish(p)
+        p.point.x = 2
+        p.point.y = -2
+        rate.sleep()
+        self.clickedPointsPublisher.publish(p)
+        p.point.x = 2
+        p.point.y = 2
+        rate.sleep()
+        self.clickedPointsPublisher.publish(p)
+        p.point.x = 2
+        p.point.y = -2
+        rate.sleep()
+        self.clickedPointsPublisher.publish(p)
+
+        p.point.x = -2
+        p.point.y = -2
+        rate.sleep()
+        self.clickedPointsPublisher.publish(p)
+        pass
+
 
     @staticmethod
     def map(value, low, high, low2, high2):
@@ -286,11 +396,35 @@ class ModeReturn(ModeBase):
     def __init__(self):
         ModeBase.__init__(self)
 
+        self.sac = actionlib.SimpleActionClient("move_base", MoveBaseAction)
+        self.sac.wait_for_server()
+
     def start(self):
         ModeBase.start(self)
 
+        try:
+            with open(SystemValues.dataPath + SystemValues.basePointName) as f:
+                t = json.loads(f.read())
+        except Exception as e:
+            rospy.logwarn("File loading error: " + str(e))
+        if (t is not None):
+            self.basePoint = t
+            goal_msg = MoveBaseGoal(
+            PoseStamped(Header(0, rospy.Time(), "map"), Pose(Point(self.basePoint[0], self.basePoint[1], 0), Quaternion(0, 0, 0, 1))))
+            self.sac.send_goal(goal_msg, done_cb=self.on_reach_base_point)
+        else:
+            rospy.logwarn("Base point is not set. Cancel RETURN" + str(e))
+            SystemValues.StateControllerManager.set_mode(SetModeRequest.PAUSE)
+
+    def on_reach_base_point(self, x, y):
+        #if(fb.)
+        rospy.log("Base point is reached")
+        SystemValues.StateControllerManager.set_mode(SetModeRequest.PAUSE)
+        pass
+
     def finish(self):
         ModeBase.finish(self)
+        self.sac.cancel_goal()
 
     def get_mode_index(self):
         return SetModeRequest.RETURN
