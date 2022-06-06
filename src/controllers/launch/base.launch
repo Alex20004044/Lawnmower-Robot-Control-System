@@ -1,8 +1,20 @@
 <launch>
 
-<arg name="map" />
+<!--<arg name="map" />-->
 
-  <node name="map_server" pkg="map_server" type="map_server" args="$(arg map)" />
+  <!--<node name="map_server" pkg="map_server" type="map_server" args="$(arg map)" />-->
+  
+  <!--<node name="mow_costmap_2d" pkg="costmap_2d" type="costmap_2d_node" output="screen">
+    <rosparam file="$(find controllers)/config/costmap_common_params.yaml" command="load"/>
+    <rosparam file="$(find controllers)/config/mow_costmap_params.yaml" command="load"  />
+  </node>-->
+  <!--
+  <node name="mow_move_base" pkg="move_base" type="move_base" respawn="false" output="screen">
+    <rosparam file="$(find controllers)/config/costmap_common_params.yaml" command="load" ns="mow_global_costmap" />
+    <rosparam file="$(find controllers)/config/costmap_common_params.yaml" command="load" ns="mow_local_costmap" />
+    <rosparam file="$(find controllers)/config/local_costmap_params.yaml" command="load" />
+    <rosparam file="$(find controllers)/config/mow_costmap_params.yaml" command="load" />
+  </node>-->
 
   <node name="move_base" pkg="move_base" type="move_base" respawn="false" output="screen">
     <rosparam file="$(find controllers)/config/costmap_common_params.yaml" command="load" ns="global_costmap" />

@@ -33,3 +33,8 @@ class SystemValues:
 	map_resolution = 0.05
 	#map_origin = (-125,-125)
 	map_origin = (-100, -100)
+
+	mapxmin = -5
+	mapxmax = 5
+	mapymin = -5
+	mapymax = 5

@@ -44,6 +44,7 @@ class MapDrive(MarkerVisualization):
 		self.base_frame = rospy.get_param("~base_frame", "base_link")
 
 		rospy.Subscriber("/clicked_point", PointStamped, self.rvizPointReceived)
+		#Attention!
 		rospy.Subscriber("/move_base/global_costmap/costmap", OccupancyGrid, self.globalCostmapReceived)
 		rospy.Subscriber("/move_base/local_costmap/costmap", OccupancyGrid, self.localCostmapReceived)
 		self.tfBuffer = tf2_ros.Buffer()

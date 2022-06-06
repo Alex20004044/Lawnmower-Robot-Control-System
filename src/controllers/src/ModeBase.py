@@ -24,6 +24,17 @@ class ModeBase:
         self.isActive = False
         self.publisher_cmd_vel = rospy.Publisher("cmd_vel", Twist, queue_size=1)
 
+        self.zoneDict = {}
+        self.width = SystemValues.map_width
+        self.height = SystemValues.map_height
+        self.resolution = SystemValues.map_resolution
+        self.origin = SystemValues.map_origin
+
+        self.mapPublisher = rospy.Publisher(SystemValues.roadMapTopicName, OccupancyGrid, queue_size=1, latch=True)
+        self.moveBaseActionClient = actionlib.SimpleActionClient("move_base", MoveBaseAction)
+
+        rospy.logwarn("Mode Init: " + str(self.get_mode_index()))
+
     def finish(self):
         self.isActive = False
         self.reset()
@@ -43,6 +54,7 @@ class ModeBase:
     def reset(self):
         self.reset_velocity()
         SystemValues.StateControllerManager.set_blades(False)
+        self.moveBaseActionClient.cancel_all_goals()
 
     def reset_velocity(self):
         msg = Twist()
@@ -54,6 +66,121 @@ class ModeBase:
         msg.angular.y = 0
         msg.angular.z = 0
         self.publisher_cmd_vel.publish(msg)
+
+    def publish_road_map(self):
+        try:
+            with open(SystemValues.dataPath + SystemValues.dataZoneName) as f:
+                t = json.loads(f.read())
+        except Exception as e:
+            rospy.logwarn("File loading error: " + str(e))
+        if(t is not None):
+            self.zoneDict = t
+        else:
+            SystemValues.StateControllerManager.set_mode(SetModeRequest.PAUSE)
+            rospy.logwarn("Target zones not found: " + str(e))
+
+        greenZone = self.create_zone_image(SetupCommandsRequest.ENABLE_GREEN_MODE)
+        cv2.imwrite(SystemValues.dataPath + SystemValues.greenZoneMapName, greenZone)
+
+        yellowZone = self.create_zone_image(SetupCommandsRequest.ENABLE_YELLOW_MODE)
+        cv2.imwrite(SystemValues.dataPath + SystemValues.yellowZoneMapName, yellowZone)
+
+        redZone = self.create_zone_image(SetupCommandsRequest.ENABLE_RED_MODE)
+        cv2.imwrite(SystemValues.dataPath + SystemValues.redZoneMapName, redZone)
+
+        roadZone = cv2.add(greenZone, yellowZone)
+        roadZone = cv2.subtract(roadZone, redZone)
+        cv2.imwrite(SystemValues.dataPath + SystemValues.roadZoneMapName, roadZone)
+
+        roadMap = OccupancyGrid()
+
+        roadMap.header.frame_id = SystemValues.roadMapTopicName
+
+        roadMap.info.map_load_time = rospy.Time()
+        roadMap.info.resolution = self.resolution;
+        roadMap.info.width = self.width;
+        roadMap.info.height = self.height;
+        roadMap.info.origin.position.x = self.origin[0];
+        roadMap.info.origin.position.y = self.origin[1];
+        roadMap.info.origin.position.z = 0;
+        roadMap.info.origin.orientation.x = 0;
+        roadMap.info.origin.orientation.y = 0;
+        roadMap.info.origin.orientation.z = 0;
+
+        roadZone = (255 - roadZone) // 255 * 100
+        roadMap.data = np.reshape(roadZone, -1).tolist()
+
+        rospy.logerr(roadZone.dtype)
+        self.mapPublisher.publish(roadMap)
+
+        pass
+
+    def publish_mow_map(self):
+        try:
+            with open(SystemValues.dataPath + SystemValues.dataZoneName) as f:
+                t = json.loads(f.read())
+        except Exception as e:
+            rospy.logwarn("File loading error: " + str(e))
+        if(t is not None):
+            self.zoneDict = t
+        else:
+            SystemValues.StateControllerManager.set_mode(SetModeRequest.PAUSE)
+            rospy.logwarn("Target zones not found: " + str(e))
+
+        greenZone = self.create_zone_image(SetupCommandsRequest.ENABLE_GREEN_MODE)
+        cv2.imwrite(SystemValues.dataPath + SystemValues.greenZoneMapName, greenZone)
+
+        yellowZone = self.create_zone_image(SetupCommandsRequest.ENABLE_YELLOW_MODE)
+        cv2.imwrite(SystemValues.dataPath + SystemValues.yellowZoneMapName, yellowZone)
+
+        redZone = self.create_zone_image(SetupCommandsRequest.ENABLE_RED_MODE)
+        cv2.imwrite(SystemValues.dataPath + SystemValues.redZoneMapName, redZone)
+
+        mowZone = cv2.subtract(greenZone, yellowZone)
+        mowZone = cv2.subtract(mowZone, redZone)
+        cv2.imwrite(SystemValues.dataPath + SystemValues.mowZoneMapName, mowZone)
+
+        mowMap = OccupancyGrid()
+
+        #!ROAD_MAP_COORDINATE!!!
+        mowMap.header.frame_id = SystemValues.roadMapTopicName
+
+        mowMap.info.map_load_time = rospy.Time()
+        mowMap.info.resolution = self.resolution;
+        mowMap.info.width = self.width;
+        mowMap.info.height = self.height;
+        mowMap.info.origin.position.x = self.origin[0];
+        mowMap.info.origin.position.y = self.origin[1];
+        mowMap.info.origin.position.z = 0;
+        mowMap.info.origin.orientation.x = 0;
+        mowMap.info.origin.orientation.y = 0;
+        mowMap.info.origin.orientation.z = 0;
+
+        mowZone = (255 - mowZone) // 255 * 100
+        mowMap.data = np.reshape(mowZone, -1).tolist()
+
+        self.mapPublisher.publish(mowMap)
+
+        pass
+
+    def create_zone_image(self, zoneColorIndex):
+        image = np.zeros((self.width,self.height,3), np.uint8)
+
+        print(self.zoneDict)
+        polygons = self.zoneDict[str(zoneColorIndex)]
+
+        print(polygons)
+        #polygons = (polygons - self.origin) / self.resolution
+
+        for polygon in polygons:
+            npa = np.int_((np.array(polygon) - self.origin) / self.resolution)
+            print(npa)
+            cv2.fillPoly(
+                image,
+                [npa],
+                color=(255,255,255),
+            )
+        return cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
 
 
 class ModePause(ModeBase):
@@ -222,30 +349,13 @@ class ModeMow(ModeBase):
 
     def __init__(self):
         ModeBase.__init__(self)
-        self.zoneDict = {}
-        self.width = SystemValues.map_width
-        self.height = SystemValues.map_height
-        self.resolution = SystemValues.map_resolution
-        self.origin = SystemValues.map_origin
-
-        self.mowMapPublisher = rospy.Publisher(SystemValues.mowMapTopicName, OccupancyGrid, queue_size=1, latch=True)
-        self.roadMapPublisher = rospy.Publisher(SystemValues.roadMapTopicName, OccupancyGrid, queue_size=1, latch=True)
         self.clickedPointsPublisher = rospy.Publisher(SystemValues.clickedPointsTopicName, PointStamped, queue_size=50)
+        self.publish_mow_map()
 
     def start(self):
         ModeBase.start(self)
-        try:
-            with open(SystemValues.dataPath + SystemValues.dataZoneName) as f:
-                t = json.loads(f.read())
-        except Exception as e:
-            rospy.logwarn("File loading error: " + str(e))
-        if(t is not None):
-            self.zoneDict = t
-        else:
-            SystemValues.StateControllerManager.set_mode(SetModeRequest.PAUSE)
-            rospy.logwarn("Target zones not found: " + str(e))
-        self.create_maps()
-        #self.publish_maps()
+
+        self.publish_mow_map()
         self.publish_cpp_goal()
 
 
@@ -258,129 +368,35 @@ class ModeMow(ModeBase):
     def on_low_battery(self):
         SystemValues.StateControllerManager.set_mode(SetModeRequest.RETURN)
 
-    def create_maps(self):
-        greenZone = self.create_zone_image(SetupCommandsRequest.ENABLE_GREEN_MODE)
-        cv2.imwrite(SystemValues.dataPath + SystemValues.greenZoneMapName, greenZone)
-
-        yellowZone = self.create_zone_image(SetupCommandsRequest.ENABLE_YELLOW_MODE)
-        cv2.imwrite(SystemValues.dataPath + SystemValues.yellowZoneMapName, yellowZone)
-
-        redZone = self.create_zone_image(SetupCommandsRequest.ENABLE_RED_MODE)
-        cv2.imwrite(SystemValues.dataPath + SystemValues.redZoneMapName, redZone)
-
-
-        mowZone = cv2.subtract(greenZone, yellowZone)
-        mowZone = cv2.subtract(mowZone, redZone)
-        cv2.imwrite(SystemValues.dataPath + SystemValues.mowZoneMapName, mowZone)
-
-        mowMap = OccupancyGrid()
-
-        mowMap.header.frame_id = SystemValues.mowMapTopicName
-
-        mowMap.info.map_load_time = rospy.Time()
-        mowMap.info.resolution = self.resolution;
-        mowMap.info.width = self.width;
-        mowMap.info.height = self.height;
-        mowMap.info.origin.position.x = self.origin[0];
-        mowMap.info.origin.position.y = self.origin[1];
-        mowMap.info.origin.position.z = 0;
-        mowMap.info.origin.orientation.x = 0;
-        mowMap.info.origin.orientation.y = 0;
-        mowMap.info.origin.orientation.z = 0;
-
-        mowZone = (255 - mowZone) // 255 * 100
-        mowMap.data = np.reshape(mowZone, -1).tolist()
-
-        rospy.logerr(mowZone.dtype)
-        self.mowMapPublisher.publish(mowMap)
-
-
-        roadZone = cv2.add(greenZone, yellowZone)
-        roadZone = cv2.subtract(roadZone, redZone)
-        cv2.imwrite(SystemValues.dataPath + SystemValues.roadZoneMapName, roadZone)
-
-        roadMap = OccupancyGrid()
-
-        roadMap.header.frame_id = SystemValues.roadMapTopicName
-
-        roadMap.info.map_load_time = rospy.Time()
-        roadMap.info.resolution = self.resolution;
-        roadMap.info.width = self.width;
-        roadMap.info.height = self.height;
-        roadMap.info.origin.position.x = self.origin[0];
-        roadMap.info.origin.position.y = self.origin[1];
-        roadMap.info.origin.position.z = 0;
-        roadMap.info.origin.orientation.x = 0;
-        roadMap.info.origin.orientation.y = 0;
-        roadMap.info.origin.orientation.z = 0;
-
-
-        roadZone = (255 - roadZone)// 255 * 100
-        roadMap.data = np.reshape(roadZone, -1).tolist()
-
-        rospy.logerr(roadZone.dtype)
-        self.roadMapPublisher.publish(roadMap)
-
-
-    def create_zone_image(self, zoneColorIndex):
-        image = np.zeros((self.width,self.height,3), np.uint8)
-
-        print(self.zoneDict)
-        polygons = self.zoneDict[str(zoneColorIndex)]
-
-        print(polygons)
-        #polygons = (polygons - self.origin) / self.resolution
-
-        for polygon in polygons:
-            npa = np.int_((np.array(polygon) - self.origin) / self.resolution)
-            print(npa)
-            cv2.fillPoly(
-                image,
-                [npa],
-                color=(255,255,255),
-            )
-        return cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-
     def publish_cpp_goal(self):
-        # p = PointStamped()
-        # p.point.x = SystemValues.map_origin[0]
-        # p.point.y = SystemValues.map_origin[1]
-        # self.clickedPointsPublisher.publish(p)
-        # p.point.x = SystemValues.map_origin[0] + SystemValues.map_width * SystemValues.map_resolution
-        # p.point.y = SystemValues.map_origin[1]
-        # self.clickedPointsPublisher.publish(p)
-        # p.point.x = SystemValues.map_origin[0] + SystemValues.map_width * SystemValues.map_resolution
-        # p.point.y = SystemValues.map_origin[1] + SystemValues.map_width * SystemValues.map_resolution
-        # self.clickedPointsPublisher.publish(p)
-        # p.point.x = SystemValues.map_origin[0]
-        # p.point.y = SystemValues.map_origin[1] + SystemValues.map_width * SystemValues.map_resolution
-        # self.clickedPointsPublisher.publish(p)
-        #
-        # p.point.x = SystemValues.map_origin[0]
-        # p.point.y = SystemValues.map_origin[1]
-        # self.clickedPointsPublisher.publish(p)
+        xmin = SystemValues.mapxmin
+        xmax = SystemValues.mapxmax
+        ymin = SystemValues.mapymin
+        ymax = SystemValues.mapymax
+
         rate = rospy.Rate(10)
         p = PointStamped()
-        p.header.frame_id = SystemValues.mowMapTopicName
-        p.point.x = -2
-        p.point.y = -2
+        p.header.frame_id = SystemValues.roadMapTopicName
+        p.point.x = xmin
+        p.point.y = ymin
+
         rospy.logerr(p)
         self.clickedPointsPublisher.publish(p)
-        p.point.x = 2
-        p.point.y = -2
+        p.point.x = xmax
+        p.point.y = ymin
         rate.sleep()
         self.clickedPointsPublisher.publish(p)
-        p.point.x = 2
-        p.point.y = 2
+        p.point.x = xmax
+        p.point.y = ymax
         rate.sleep()
         self.clickedPointsPublisher.publish(p)
-        p.point.x = 2
-        p.point.y = -2
+        p.point.x = xmin
+        p.point.y = ymax
         rate.sleep()
         self.clickedPointsPublisher.publish(p)
 
-        p.point.x = -2
-        p.point.y = -2
+        p.point.x = xmin
+        p.point.y = ymin
         rate.sleep()
         self.clickedPointsPublisher.publish(p)
         pass
@@ -396,35 +412,31 @@ class ModeReturn(ModeBase):
     def __init__(self):
         ModeBase.__init__(self)
 
-        self.sac = actionlib.SimpleActionClient("move_base", MoveBaseAction)
-        self.sac.wait_for_server()
-
     def start(self):
         ModeBase.start(self)
-
         try:
             with open(SystemValues.dataPath + SystemValues.basePointName) as f:
                 t = json.loads(f.read())
         except Exception as e:
             rospy.logwarn("File loading error: " + str(e))
         if (t is not None):
+            self.publish_road_map()
             self.basePoint = t
             goal_msg = MoveBaseGoal(
-            PoseStamped(Header(0, rospy.Time(), "map"), Pose(Point(self.basePoint[0], self.basePoint[1], 0), Quaternion(0, 0, 0, 1))))
-            self.sac.send_goal(goal_msg, done_cb=self.on_reach_base_point)
+            PoseStamped(Header(0, rospy.Time(), SystemValues.roadMapTopicName), Pose(Point(self.basePoint[0], self.basePoint[1], 0), Quaternion(0, 0, 0, 1))))
+            self.moveBaseActionClient.send_goal(goal_msg, done_cb=self.on_reach_base_point)
         else:
             rospy.logwarn("Base point is not set. Cancel RETURN" + str(e))
             SystemValues.StateControllerManager.set_mode(SetModeRequest.PAUSE)
 
     def on_reach_base_point(self, x, y):
-        #if(fb.)
         rospy.log("Base point is reached")
         SystemValues.StateControllerManager.set_mode(SetModeRequest.PAUSE)
         pass
 
     def finish(self):
         ModeBase.finish(self)
-        self.sac.cancel_goal()
+        self.moveBaseActionClient.cancel_goal()
 
     def get_mode_index(self):
         return SetModeRequest.RETURN

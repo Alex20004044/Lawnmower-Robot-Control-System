@@ -9,6 +9,7 @@ TrajectoryPlannerROS:
   yaw_goal_tolerance: 0.05
   xy_goal_tolerance: 0.15
   latch_xy_goal_tolerance: true
+  pdist_scale: 2
   
 make_plan_add_unreachable_goal: false
 make_plan_clear_costmap: false
