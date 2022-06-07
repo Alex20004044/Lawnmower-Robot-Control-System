@@ -24,6 +24,8 @@ from math import *
 from libs.trapezoidal_coverage import calc_path as trapezoid_calc_path
 from libs.border_drive import border_calc_path
 
+from std_srvs.srv import SetBool, SetBoolResponse
+
 
 INSCRIBED_INFLATED_OBSTACLE = 253
 
@@ -32,6 +34,9 @@ class MapDrive(MarkerVisualization):
 		rospy.init_node('map_drive')
 		self.rospack = rospkg.RosPack()
 		MarkerVisualization.__init__(self)
+		
+		#Attention!
+		self.isDisabled = False
 
 		self.lClickPoints = []
 		self.global_frame = "map" # read from "/clicked_point"
@@ -50,6 +55,8 @@ class MapDrive(MarkerVisualization):
 		self.tfBuffer = tf2_ros.Buffer()
 		listener = tf2_ros.TransformListener(self.tfBuffer)
 		self.move_base = actionlib.SimpleActionClient("move_base", MoveBaseAction)
+		
+		rospy.Service("disable_navigation", SetBool, self.set_is_disabled_callback)
 
 		rospy.loginfo("Waiting for the move_base action server to come up")
 		self.move_base.wait_for_server()
@@ -58,6 +65,15 @@ class MapDrive(MarkerVisualization):
 		rospy.on_shutdown(self.on_shutdown)
 
 		rospy.loginfo("Running..")
+		
+	def set_is_disabled_callback(self, req):
+        	self.set_is_disabled(req.data)
+        	return SetBoolResponse(True, "OK")
+
+	def set_is_disabled(self, isDisable):
+        	self.isDisabled = isDisable
+        	self.on_shutdown()
+        	rospy.logerr("external disable")
 
 	def globalCostmapReceived(self, costmap):
 		self.global_costmap = costmap
@@ -68,6 +84,9 @@ class MapDrive(MarkerVisualization):
 		self.local_costmap_height = costmap.info.height*costmap.info.resolution
 
 	def rvizPointReceived(self, point):
+		if self.isDisabled:
+			self.isDisabled = False
+	
 		if self.global_costmap is None or self.local_costmap is None:
 			rospy.logerr("No global or local costmap, doing nothing.")
 			return
@@ -177,6 +196,7 @@ class MapDrive(MarkerVisualization):
 		rospy.loginfo("Canceling all goals")
 		self.visualization_cleanup()
 		self.move_base.cancel_all_goals()
+		self.lClickPoints = []
 
 	def get_closes_possible_goal(self, pos_last, pos_next, angle, tolerance):
 		angle_quat = tf.transformations.quaternion_from_euler(0, 0, angle)
@@ -228,6 +248,10 @@ class MapDrive(MarkerVisualization):
 
 		for pos_last,pos_next in pairwise(path):
 			if rospy.is_shutdown(): return
+			#Attention!
+			if self.isDisabled:
+				self.on_shutdown()
+				return
 
 			pos_diff = np.array(pos_next)-np.array(pos_last)
 			# angle from last to current position

@@ -1,7 +1,7 @@
 <launch>
 
 <!--<arg name="map" />-->
-
+  <!--<node name="map_server" pkg="map_server" type="map_server" args="Data/empty_map.yaml" />-->
   <!--<node name="map_server" pkg="map_server" type="map_server" args="$(arg map)" />-->
   
   <!--<node name="mow_costmap_2d" pkg="costmap_2d" type="costmap_2d_node" output="screen">

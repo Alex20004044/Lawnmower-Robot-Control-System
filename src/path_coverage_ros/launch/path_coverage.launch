@@ -9,7 +9,7 @@
 		<!-- Drive around the cell first -->
 		<param name="border_drive" value="$(arg border_drive)"/>
 		<!-- Width of each path -->
-		<param name="robot_width" value="0.1"/>
+		<param name="robot_width" value="0.2"/>
 		<!-- Maximum costmap value to consider free -->
 		<param name="costmap_max_non_lethal" value="90"/>
 		<!-- The robots base frame -->

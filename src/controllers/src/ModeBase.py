@@ -14,6 +14,7 @@ import tf2_ros
 import actionlib
 import cv2
 import numpy as np
+from std_srvs.srv import SetBool, SetBoolRequest, SetBoolResponse
 import matplotlib.pyplot as plt
 
 
@@ -110,7 +111,7 @@ class ModeBase:
         roadZone = (255 - roadZone) // 255 * 100
         roadMap.data = np.reshape(roadZone, -1).tolist()
 
-        rospy.logerr(roadZone.dtype)
+        #rospy.logerr(roadZone.dtype)
         self.mapPublisher.publish(roadMap)
 
         pass
@@ -334,6 +335,7 @@ class ModeSetup(ModeBase):
         return "Base point is set in: " + str(pos)
 
     def reset_zone(self, zoneColorIndex):
+        self.zoneDict[str(zoneColorIndex)] = []
         return "Reset zone: " + str(zoneColorIndex)
 
     def get_current_position(self):
@@ -356,11 +358,17 @@ class ModeMow(ModeBase):
         ModeBase.start(self)
 
         self.publish_mow_map()
+        rospy.Duration(3)
         self.publish_cpp_goal()
+        SystemValues.StateControllerManager.set_blades(True)
 
 
     def finish(self):
         ModeBase.finish(self)
+        sp = rospy.ServiceProxy(SystemValues.disableNavigationService, SetBool)
+        sp(True)
+        rospy.logerr("Service call to disable navigation")
+        SystemValues.StateControllerManager.set_blades(False)
 
     def get_mode_index(self):
         return SetModeRequest.MOW
@@ -430,7 +438,7 @@ class ModeReturn(ModeBase):
             SystemValues.StateControllerManager.set_mode(SetModeRequest.PAUSE)
 
     def on_reach_base_point(self, x, y):
-        rospy.log("Base point is reached")
+        rospy.logwarn("Base point is reached")
         SystemValues.StateControllerManager.set_mode(SetModeRequest.PAUSE)
         pass
 
@@ -449,9 +457,7 @@ class ModeEmergency(ModeBase):
 
     def start(self):
         ModeBase.start(self)
-
-    def finish(self):
-        ModeBase.finish(self)
+        SystemValues.StateControllerManager.set_blades(False)
 
     def get_mode_index(self):
         return SystemValues.emergency_code

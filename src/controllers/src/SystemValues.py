@@ -28,11 +28,13 @@ class SystemValues:
 
 	clickedPointsTopicName = "/clicked_point"
 
-	map_width = 5000
-	map_height = 5000
+	disableNavigationService = "disable_navigation"
+
+	map_width = 2500
+	map_height = 2500
 	map_resolution = 0.05
 	#map_origin = (-125,-125)
-	map_origin = (-100, -100)
+	map_origin = (-50, -50)
 
 	mapxmin = -5
 	mapxmax = 5

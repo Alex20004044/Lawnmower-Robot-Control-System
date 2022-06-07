@@ -32,6 +32,7 @@ class StateController:
         self.isLocked = False
         self.isBladesActive = False
         self.isLowBattery = False
+        self.current_state = None
         self.set_state(self.modePause)
 
 
@@ -43,7 +44,7 @@ class StateController:
         self.isLocked = isLock
         if self.isLocked:
             self.set_state(self.modeEmergency)
-            self.set_blades(False)
+            #self.set_blades(False)
         else:
             self.set_state(self.modePause)
 
@@ -55,9 +56,7 @@ class StateController:
             return False
 
         if(mode != self.current_state.get_mode_index()):
-            self.current_state.finish()
             self.set_state(self.get_mode(mode))
-            self.current_state.start()
             return True
         else:
             return False
@@ -110,12 +109,14 @@ class StateController:
             return self.modePause
 
     def set_state(self, state):
+        self.current_state.finish()
         self.current_state = state
+        self.current_state.start()
         self._log_system_info()
 
 
     def _log_system_info(self):
-        info = "Current state: " + str(self.current_state.get_mode_index()) + ' | '
+        info = "[" + str(rospy.Time()) + "] Current state: " + str(self.current_state.get_mode_index()) + ' | '
         info = info + "IsLocked: " + str(self.isLocked) + ' | '
         info = info + "IsBladesActive: " + str(self.isBladesActive) + ' | '
         info = info + "IsLowBattery: " + str(self.isLowBattery)
