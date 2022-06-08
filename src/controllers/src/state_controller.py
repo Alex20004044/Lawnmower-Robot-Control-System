@@ -7,7 +7,7 @@ from std_msgs.msg import String
 from geometry_msgs.msg import Twist
 from SystemValues import *
 from ModeBase import *
-
+import datetime
 
 class StateController:
 
@@ -20,6 +20,7 @@ class StateController:
         self.set_mode_service = rospy.Service("set_mode", SetMode, self.set_mode_callback)
 
         self.publisher_current_state = rospy.Publisher(SystemValues.current_state, String, queue_size=5)
+        SystemValues.StateControllerManager = self
 
         self.modePause = ModePause()
         self.modeManual = ModeManual()
@@ -34,7 +35,6 @@ class StateController:
         self.isLowBattery = False
         self.current_state = None
         self.set_state(self.modePause)
-
 
     def set_lock_callback(self, req):
         self.set_lock(req.data)
@@ -109,14 +109,15 @@ class StateController:
             return self.modePause
 
     def set_state(self, state):
-        self.current_state.finish()
+        if self.current_state is not None:
+            self.current_state.finish()
         self.current_state = state
         self.current_state.start()
         self._log_system_info()
 
 
     def _log_system_info(self):
-        info = "[" + str(rospy.Time()) + "] Current state: " + str(self.current_state.get_mode_index()) + ' | '
+        info = "[RT" + str(datetime.datetime.now()) + "] ST[" + "] Current state: " + str(self.current_state.get_mode_index()) + ' | '
         info = info + "IsLocked: " + str(self.isLocked) + ' | '
         info = info + "IsBladesActive: " + str(self.isBladesActive) + ' | '
         info = info + "IsLowBattery: " + str(self.isLowBattery)

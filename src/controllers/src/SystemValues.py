@@ -40,3 +40,7 @@ class SystemValues:
 	mapxmax = 5
 	mapymin = -5
 	mapymax = 5
+
+	robotRadius = 0.2
+
+	coverageImageName = "CoverageImage.png"
