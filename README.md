@@ -1,5 +1,8 @@
 # Lawnmower-Robot-Control-System
+Non wire robot lawnmower control system. Graduation project
 
+
+# Installation RU
 Для запуска системы, необходимо установить следующее ПО:
 ROS Noetic: http://wiki.ros.org/noetic/Installation;
 Gazebo: https://www.gazebosim.org/tutorials?tut=install_from_source&cat=install;
